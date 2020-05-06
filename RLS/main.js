@@ -8,7 +8,6 @@ const SCREEN_CENTER_Y = SCREEN_HEIGHT / 2;  // スクリーン高さの半分
 const FPS = 30; // 30フレ
 
 const FONT_FAMILY = "'misaki_gothic','Meiryo',sans-serif";
-const FONT_FAMILY_MAP = "'Press Start 2P','Meiryo',sans-serif";
 const ASSETS = {
     "player": "./resource/angus_128.png",
     "enemy0": "./resource/assassin_128.png",
@@ -1146,8 +1145,8 @@ tm.define("GameScene", {
                     fillStyle: "#fff",
                     shadowColor: "#000",
                     shadowBlur: 0,
-                    fontSize: 12,
-                    fontFamily: FONT_FAMILY_MAP,
+                    fontSize: 24,
+                    fontFamily: FONT_FAMILY,
                     text: "",
                     align: "center",
                 },
@@ -1574,97 +1573,107 @@ tm.define("GameScene", {
             }
 
             // プレイヤーの座標とマップの表示範囲からBGを更新
-            // プレイヤーの現在位置の情報を取得
-            let playerBgMcd = getMapChipDef(player.mapX, player.mapY);
-            let playerRegion = null;
-            for (let mr of mapRegionList) {
-                if (mr.checkActual(player.mapX, player.mapY)) {
-                    playerRegion = mr;
-                    break;
-                }
-            }
-            for (let xx = -4; xx <= 4; xx++) {
-                for (let yy = -4; yy <= 4; yy++) {
-                    let bgMcd;
-                    let tmpXpos = player.mapX + xx;
-                    let tmpYpos = player.mapY + yy;
-                    if (getViewArray(tmpXpos, tmpYpos) === 1) {
-                        bgMcd = getMapChipDef(tmpXpos, tmpYpos);
-                    } else {
-                        bgMcd = MAP_CHIP_DEF.DARK;
-                    }
-                    for (; ;) {
-                        if (bgMcd === MAP_CHIP_DEF.DARK) break;
-                        if (playerBgMcd.isRoom) {
-                            // プレイヤーが部屋にいる時は通路はDARK
-                            if (bgMcd.isPath) {
-                                bgMcd = MAP_CHIP_DEF.DARK;
-                                break;
-                            }
-                            if (!playerBgMcd.brightness) {
-                                // プレイヤーの足元が暗闇属性の場合は自分の周囲８マスのみ
-                                if ((xx < -1) || (xx > 1) && (yy < -1) && (yy > 1)) {
-                                    if (bgMcd.isFllor || bgMcd.isPath) {
-                                        bgMcd = MAP_CHIP_DEF.DARK;
-                                        break;
-                                    }
-                                }
-                            }
-                        } else {
-                            // プレイヤーが通路にいる時は全ての部屋の床はDARK
-                            if (bgMcd.isFloor) {
-                                bgMcd = MAP_CHIP_DEF.DARK;
-                                break;
-                            }
-                            if (!playerBgMcd.brightness) {
-                                // プレイヤーの足元が暗闇属性の場合は自分の周囲８マスのみ
-                                if ((xx < -1) || (xx > 1) || (yy < -1) || (yy > 1)) {
-                                    if (bgMcd.isFllor || bgMcd.isPath) {
-                                        bgMcd = MAP_CHIP_DEF.DARK;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        if (bgMcd.isFloor) {
-                            //プレイヤーがいるリージョン以外の部屋の床はDARK
-                            if (!playerRegion.checkActual(tmpXpos, tmpYpos)) {
-                                bgMcd = MAP_CHIP_DEF.DARK;
-                                break;
-                            }
-                        }
-                        break;
-                    }
+            dispPlayerLocalMap();
 
-                    getBgArray(4 + xx, 4 + yy).gotoAndPlay("" + bgMcd.value);
-                }
-            }
             // 全体マップ表示
-            {
-                this.mapLabel.setAlpha(1.0);
-                let mapLabelStr = "";
-                for (let yy = 4; yy <= MAP_HEIGHT - (4 + 4); yy++) {
-                    let tmp = "";
-                    for (let xx = 4; xx <= MAP_WIDTH - (4 + 4); xx++) {
-                        if (getViewArray(xx, yy) == 1) {
-                            if ((xx === player.mapX) && (yy === player.mapY)) {
-                                tmp += "@";
-                            } else {
-                                tmp += getMapChipDef(xx, yy).mapChr;
-                            }
-                        } else {
-                            tmp += " ";
-                        }
-                    }
-                    mapLabelStr += tmp + "\n";
-                }
-                this.mapLabel.text = mapLabelStr;
-            }
+            dispGlobalMap(this);
         }
 
         ++frame;
     }
 });
+
+function dispPlayerLocalMap() {
+    // プレイヤーの現在位置の情報を取得
+    let playerBgMcd = getMapChipDef(player.mapX, player.mapY);
+    let playerRegion = null;
+    for (let mr of mapRegionList) {
+        if (mr.checkActual(player.mapX, player.mapY)) {
+            playerRegion = mr;
+            break;
+        }
+    }
+
+    //
+    for (let xx = -4; xx <= 4; xx++) {
+        for (let yy = -4; yy <= 4; yy++) {
+            let bgMcd;
+            let tmpXpos = player.mapX + xx;
+            let tmpYpos = player.mapY + yy;
+            if (getViewArray(tmpXpos, tmpYpos) === 1) {
+                bgMcd = getMapChipDef(tmpXpos, tmpYpos);
+            } else {
+                bgMcd = MAP_CHIP_DEF.DARK;
+            }
+            for (; ;) {
+                if (bgMcd === MAP_CHIP_DEF.DARK) break;
+                if (playerBgMcd.isRoom) {
+                    // プレイヤーが部屋にいる時は通路はDARK
+                    if (bgMcd.isPath) {
+                        bgMcd = MAP_CHIP_DEF.DARK;
+                        break;
+                    }
+                    if (!playerBgMcd.brightness) {
+                        // プレイヤーの足元が暗闇属性の場合は自分の周囲８マスのみ
+                        if ((xx < -1) || (xx > 1) && (yy < -1) && (yy > 1)) {
+                            if (bgMcd.isFllor || bgMcd.isPath) {
+                                bgMcd = MAP_CHIP_DEF.DARK;
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    // プレイヤーが通路にいる時は全ての部屋の床はDARK
+                    if (bgMcd.isFloor) {
+                        bgMcd = MAP_CHIP_DEF.DARK;
+                        break;
+                    }
+                    if (!playerBgMcd.brightness) {
+                        // プレイヤーの足元が暗闇属性の場合は自分の周囲８マスのみ
+                        if ((xx < -1) || (xx > 1) || (yy < -1) || (yy > 1)) {
+                            if (bgMcd.isFllor || bgMcd.isPath) {
+                                bgMcd = MAP_CHIP_DEF.DARK;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (bgMcd.isFloor) {
+                    //プレイヤーがいるリージョン以外の部屋の床はDARK
+                    if (!playerRegion.checkActual(tmpXpos, tmpYpos)) {
+                        bgMcd = MAP_CHIP_DEF.DARK;
+                        break;
+                    }
+                }
+                break;
+            }
+
+            getBgArray(4 + xx, 4 + yy).gotoAndPlay("" + bgMcd.value);
+        }
+    }
+}
+
+function dispGlobalMap(obj) {
+    obj.mapLabel.setAlpha(1.0);
+    obj.mapLabel.setScale(1.0, 0.5);
+    let mapLabelStr = "";
+    for (let yy = 4; yy < MAP_HEIGHT - 4; yy++) {
+        let tmp = "";
+        for (let xx = 4; xx < MAP_WIDTH - 4; xx++) {
+            if ((getViewArray(xx, yy) === 1) || false) {
+                if ((xx === player.mapX) && (yy === player.mapY)) {
+                    tmp += "@";
+                } else {
+                    tmp += getMapChipDef(xx, yy).mapChr;
+                }
+            } else {
+                tmp += " ";
+            }
+        }
+        mapLabelStr += tmp + "\n";
+    }
+    obj.mapLabel.text = mapLabelStr;
+}
 
 /*
  * Player
@@ -1817,7 +1826,6 @@ function dirKeyProcInternal(dkDef) {
         if (dkDef.aminBase !== null) {
             player.aminBase = dkDef.aminBase;
         }
-        console.log(player.aminBase + player.aminCount);
         player.gotoAndPlay(player.aminBase + player.aminCount);
     } while (false);
     if (!moveFlag) {
@@ -1862,25 +1870,35 @@ function buttonA() {
         chkLoop: for (let xx = -1; xx <= 1; xx++) {
             for (let yy = -1; yy <= 1; yy++) {
                 if ((xx === 0) && (yy === 0)) continue;
-                mapKind = getMapArray(player.mapX + xx, player.mapY + yy);
-                if ((mapKind === 9) || (mapKind === 10)) {
+                mapKind = getMapChipDef(player.mapX + xx, player.mapY + yy);
+                if ((mapKind === MAP_CHIP_DEF.S_DOOR_0) || (mapKind === MAP_CHIP_DEF.S_DOOR_1)) {
                     // 隠し扉
-                    setMapArray(player.mapX + xx, player.mapY + yy, 1);
+                    // 見つけたら扉になる
+                    setMapArray(player.mapX + xx, player.mapY + yy, MAP_CHIP_DEF.DOOR.value);
                     break chkLoop;
                 }
-                if (mapKind === 11) {
+                if (mapKind === MAP_CHIP_DEF.TRAP_F) {
                     // 罠(床)
-                    setMapArray(player.mapX + xx, player.mapY + yy, 1);
+                    // 罠解除したら床になる
+                    setMapArray(player.mapX + xx, player.mapY + yy, MAP_CHIP_DEF.FLOOR.value);
                     break chkLoop;
                 }
-                if (mapKind === 12) {
+                if (mapKind === MAP_CHIP_DEF.TRAP_P) {
                     // 罠(道)
-                    setMapArray(player.mapX + xx, player.mapY + yy, 3);
+                    // 罠解除したら道になる
+                    setMapArray(player.mapX + xx, player.mapY + yy, MAP_CHIP_DEF.PATH.value);
                     break chkLoop;
                 }
-                if (mapKind === 13) {
-                    // 罠(宝箱)
-                    setMapArray(player.mapX + xx, player.mapY + yy, 6);
+                if (mapKind === MAP_CHIP_DEF.TRAP_T_F) {
+                    // 罠(床の宝箱)
+                    // 罠解除したら宝箱になる
+                    setMapArray(player.mapX + xx, player.mapY + yy, MAP_CHIP_DEF.T_BOX_F.value);
+                    break chkLoop;
+                }
+                if (mapKind === MAP_CHIP_DEF.TRAP_T_P) {
+                    // 罠(道の宝箱)
+                    // 罠解除したら宝箱になる
+                    setMapArray(player.mapX + xx, player.mapY + yy, MAP_CHIP_DEF.T_BOX_P);
                     break chkLoop;
                 }
             }
@@ -1893,6 +1911,14 @@ function buttonB() {
     if (!player.status.isAccKey) return;
 }
 
+class DoorInfo {
+    constructor(xPos, yPos, wall, kind) {
+        this.xPos = xPos;
+        this.yPos = yPos;
+        this.wall = wall;
+        this.kind = kind;
+    }
+}
 class RoomInfo {
     constructor(xPos, yPos, xSize, ySize) {
         // 左上座標
@@ -1975,7 +2001,7 @@ function makeMap() {
     printDebugArray();
 
     // 扉と通路の作成
-    makeDoorAndPath();
+    let doorInfoList = makeDoorAndPath();
     //    console.log("makeDoorAndPath");
     //    printDebugArray();
 
@@ -1995,7 +2021,7 @@ function makeMap() {
     //    printDebugArray();
 
     // 隠し扉に変換
-    setSecretDoor();
+    setSecretDoor(doorInfoList);
     //    console.log("setSecretDoor");
     //    printDebugArray();
 
@@ -2019,6 +2045,7 @@ function makeMap() {
     initViewArray();
 }
 
+//
 const MIN_REGION_X_SIZE = 7;
 const MIN_REGION_Y_SIZE = 7;
 const MAX_REGION_DIV_COUNT = 10;
@@ -2108,6 +2135,7 @@ function divRegion() {
     }
 }
 
+//
 const MIN_ROOM_X_SIZE = 5;
 const MIN_ROOM_Y_SIZE = 5;
 function makeRoom() {
@@ -2162,6 +2190,7 @@ function makeRoom() {
 }
 
 function makeDoorAndPath() {
+    let doorInfoList = [];
     for (let idx = 0; idx < mapRegionList.length - 1; idx++) {
         let region0 = mapRegionList[idx];
         let region1 = mapRegionList[idx + 1];
@@ -2175,6 +2204,8 @@ function makeDoorAndPath() {
                     let d0yp = region0.room.yPos + region0.room.ySize - 1;
                     setMapArray(d0xp + 4, d0yp + 4, MAP_CHIP_DEF.DOOR.value);
                     setDebugArray(d0xp + 4, d0yp + 4, "+");
+                    doorInfoList.push(new DoorInfo(d0xp + 4, d0yp + 4, MAP_CHIP_DEF.WALL_1, MAP_CHIP_DEF.DOOR));
+
                     // ドアから下方向へ仕切り線まで道を伸ばす
                     let p0yp;
                     for (p0yp = d0yp + 1; p0yp <= region0.yPos + region0.ySize - 1; p0yp++) {
@@ -2182,11 +2213,14 @@ function makeDoorAndPath() {
                         setDebugArray(d0xp + 4, p0yp + 4, "#");
                     }
                     p0yp--;
+
                     // region1.roomの上辺にドア作成
                     let d1xp = region1.room.xPos + getRandomInt(region1.room.xSize - 2) + 1;
                     let d1yp = region1.room.yPos;
                     setMapArray(d1xp + 4, d1yp + 4, MAP_CHIP_DEF.DOOR.value);
                     setDebugArray(d1xp + 4, d1yp + 4, "+");
+                    doorInfoList.push(new DoorInfo(d1xp + 4, d1yp + 4, MAP_CHIP_DEF.WALL_1, MAP_CHIP_DEF.DOOR));
+
                     // ドアから上方向へ仕切り線まで道を伸ばす
                     let p1yp;
                     for (p1yp = d1yp - 1; p1yp >= region1.yPos; p1yp--) {
@@ -2217,6 +2251,8 @@ function makeDoorAndPath() {
                     let d0yp = region0.room.yPos;
                     setMapArray(d0xp + 4, d0yp + 4, MAP_CHIP_DEF.DOOR.value);
                     setDebugArray(d0xp + 4, d0yp + 4, "+");
+                    doorInfoList.push(new DoorInfo(d0xp + 4, d0yp + 4, MAP_CHIP_DEF.WALL_1, MAP_CHIP_DEF.DOOR));
+
                     // ドアから上方向へ仕切り線まで道を伸ばす
                     let p0yp;
                     for (p0yp = d0yp - 1; p0yp >= region0.yPos; p0yp--) {
@@ -2229,6 +2265,8 @@ function makeDoorAndPath() {
                     let d1yp = region1.room.yPos + region1.room.ySize - 1;
                     setMapArray(d1xp + 4, d1yp + 4, MAP_CHIP_DEF.DOOR.value);
                     setDebugArray(d1xp + 4, d1yp + 4, "+");
+                    doorInfoList.push(new DoorInfo(d1xp + 4, d1yp + 4, MAP_CHIP_DEF.WALL_1, MAP_CHIP_DEF.DOOR));
+
                     // ドアから下方向へ仕切り線まで道を伸ばす
                     let p1yp;
                     for (p1yp = d1yp + 1; p1yp <= region1.yPos + region1.ySize - 1; p1yp++) {
@@ -2259,6 +2297,7 @@ function makeDoorAndPath() {
                     let d0yp = region0.room.yPos + getRandomInt(region0.room.ySize - 2) + 1;
                     setMapArray(d0xp + 4, d0yp + 4, MAP_CHIP_DEF.DOOR.value);
                     setDebugArray(d0xp + 4, d0yp + 4, "+");
+                    doorInfoList.push(new DoorInfo(d0xp + 4, d0yp + 4, MAP_CHIP_DEF.WALL_0, MAP_CHIP_DEF.DOOR));
 
                     // ドアから右方向へ仕切り線まで道を伸ばす
                     let p0xp;
@@ -2273,6 +2312,7 @@ function makeDoorAndPath() {
                     let d1yp = region1.room.yPos + getRandomInt(region1.room.ySize - 2) + 1;
                     setMapArray(d1xp + 4, d1yp + 4, MAP_CHIP_DEF.DOOR.value);
                     setDebugArray(d1xp + 4, d1yp + 4, "+");
+                    doorInfoList.push(new DoorInfo(d1xp + 4, d1yp + 4, MAP_CHIP_DEF.WALL_0, MAP_CHIP_DEF.DOOR));
 
                     // ドアから左方向へ仕切り線まで道を伸ばす
                     let p1xp;
@@ -2305,6 +2345,7 @@ function makeDoorAndPath() {
                     let d0yp = region0.room.yPos + getRandomInt(region0.room.ySize - 2) + 1;
                     setMapArray(d0xp + 4, d0yp + 4, MAP_CHIP_DEF.DOOR.value);
                     setDebugArray(d0xp + 4, d0yp + 4, "+");
+                    doorInfoList.push(new DoorInfo(d0xp + 4, d0yp + 4, MAP_CHIP_DEF.WALL_0, MAP_CHIP_DEF.DOOR));
 
                     // ドアから左方向へ仕切り線まで道を伸ばす
                     let p0xp;
@@ -2319,6 +2360,7 @@ function makeDoorAndPath() {
                     let d1yp = region1.room.yPos + getRandomInt(region1.room.ySize - 2) + 1;
                     setMapArray(d1xp + 4, d1yp + 4, MAP_CHIP_DEF.DOOR.value);
                     setDebugArray(d1xp + 4, d1yp + 4, "+");
+                    doorInfoList.push(new DoorInfo(d1xp + 4, d1yp + 4, MAP_CHIP_DEF.WALL_0, MAP_CHIP_DEF.DOOR));
 
                     // ドアから右方向へ仕切り線まで道を伸ばす
                     let p1xp;
@@ -2343,6 +2385,33 @@ function makeDoorAndPath() {
                 }
                 break;
         }
+    }
+
+    return doorInfoList;
+}
+
+// 隠し扉に変換
+/**
+ * 
+ */
+function setSecretDoor(doorInfoList) {
+    let max = 3;
+    for (let cnt = 0; cnt < max; cnt++) {
+        for (let di of doorInfoList) {
+            if (di.kind !== MAP_CHIP_DEF.DOOR) continue;
+            if (getRandomInt(6) !== 0) continue;
+            if (di.wall === MAP_CHIP_DEF.WALL_0) {
+                di.kind = MAP_CHIP_DEF.S_DOOR_0;
+            } else {
+                di.kind = MAP_CHIP_DEF.S_DOOR_1;
+            }
+            break;
+        }
+    }
+
+    for (let di of doorInfoList) {
+        if (di.kind === MAP_CHIP_DEF.DOOR) continue;
+        setMapArray(di.xPos, di.yPos, di.kind.value);
     }
 }
 
@@ -2418,14 +2487,6 @@ function setTrap() {
             break;
         }
     }
-}
-
-// 隠し扉に変換
-/**
- * 
- */
-function setSecretDoor() {
-
 }
 
 /**
