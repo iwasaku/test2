@@ -8,6 +8,7 @@ const SCREEN_CENTER_Y = SCREEN_HEIGHT / 2;  // スクリーン高さの半分
 const FPS = 30; // 30フレ
 
 const FONT_FAMILY = "'misaki_gothic','Meiryo',sans-serif";
+const FONT_FAMILY_MAP = "'Press Start 2P','Meiryo',sans-serif";
 const ASSETS = {
     "player": "./resource/angus_128.png",
     "enemy0": "./resource/assassin_128.png",
@@ -24,7 +25,7 @@ const ASSETS = {
     "button_a": "./resource/button_a_128.png",
     "button_b": "./resource/button_b_128.png",
 
-    "bg": "./resource/bg.png?2",  // 背景
+    "map_chip": "./resource/map_chip.png?3",  // 背景
     "fade": "./resource/dark_128.png",  // フェード・イン／フェード・アウト用
 };
 
@@ -75,6 +76,7 @@ const MAP_CHIP_DEF = defineEnum({
         isRoom: false,
         isFloor: false,
         isPath: false,
+        mapChr: " ",
         string: 'dark'
     },
     DOOR: {
@@ -84,6 +86,7 @@ const MAP_CHIP_DEF = defineEnum({
         isRoom: true,
         isFloor: false,
         isPath: false,
+        mapChr: "+",
         string: 'door'
     },
     FLOOR: {
@@ -93,6 +96,7 @@ const MAP_CHIP_DEF = defineEnum({
         isRoom: true,
         isFloor: true,
         isPath: false,
+        mapChr: ".",
         string: 'floor'
     },
     PATH: {
@@ -102,97 +106,138 @@ const MAP_CHIP_DEF = defineEnum({
         isRoom: false,
         isFloor: false,
         isPath: true,
+        mapChr: "#",
         string: 'path'
     },
-    DOWN: {
+    S_DOOR_0: {
         value: 4,
-        collision: false,
-        brightness: true,
+        collision: true,
+        brightness: false,
         isRoom: true,
         isFloor: false,
         isPath: false,
-        string: 'DOWN'
+        mapChr: "|",
+        string: 's_door_0'
     },
-    UP: {
+    S_DOOR_1: {
         value: 5,
-        collision: false,
-        brightness: true,
+        collision: true,
+        brightness: false,
         isRoom: true,
         isFloor: false,
         isPath: false,
-        string: 'up'
+        mapChr: "-",
+        string: 's_door_1'
     },
-    T_BOX: {
+    DOWN: {
         value: 6,
         collision: false,
         brightness: true,
         isRoom: true,
         isFloor: false,
         isPath: false,
-        string: 't_box'
+        mapChr: "%",
+        string: 'DOWN'
     },
-    WALL_0: {
+    UP_L: {
         value: 7,
-        collision: true,
-        brightness: false,
+        collision: false,
+        brightness: true,
         isRoom: true,
         isFloor: false,
         isPath: false,
-        string: 'wall_0'
+        mapChr: "%",
+        string: 'up'
     },
-    WALL_1: {
+    UP_R: {
         value: 8,
-        collision: true,
-        brightness: false,
+        collision: false,
+        brightness: true,
         isRoom: true,
         isFloor: false,
         isPath: false,
-        string: 'wall_1'
-    },
-    S_DOOR_0: {
-        value: 9,
-        collision: true,
-        brightness: false,
-        isRoom: true,
-        isFloor: false,
-        isPath: false,
-        string: 's_door_0'
-    },
-    S_DOOR_1: {
-        value: 10,
-        collision: true,
-        brightness: false,
-        isRoom: true,
-        isFloor: false,
-        isPath: false,
-        string: 's_door_1'
+        mapChr: "%",
+        string: 'up'
     },
     TRAP_F: {
-        value: 11,
+        value: 9,
         collision: false,
         brightness: true,
         isRoom: true,
         isFloor: true,
         isPath: false,
+        mapChr: ".",
         string: 'trap_f'
     },
     TRAP_P: {
-        value: 12,
+        value: 10,
         collision: false,
         brightness: true,
         isRoom: false,
         isFloor: false,
         isPath: true,
+        mapChr: "#",
         string: 'trap_p'
     },
-    TRAP_T: {
+    TRAP_T_F: {
+        value: 11,
+        collision: false,
+        brightness: true,
+        isRoom: true,
+        isFloor: false,
+        isPath: false,
+        mapChr: "*",
+        string: 'trap_t'
+    },
+    TRAP_T_P: {
+        value: 12,
+        collision: false,
+        brightness: true,
+        isRoom: true,
+        isFloor: false,
+        isPath: false,
+        mapChr: "*",
+        string: 'trap_t'
+    },
+    T_BOX_F: {
         value: 13,
         collision: false,
         brightness: true,
         isRoom: true,
         isFloor: false,
         isPath: false,
-        string: 'trap_t'
+        mapChr: "*",
+        string: 't_box'
+    },
+    T_BOX_P: {
+        value: 14,
+        collision: false,
+        brightness: true,
+        isRoom: true,
+        isFloor: false,
+        isPath: false,
+        mapChr: "*",
+        string: 't_box'
+    },
+    WALL_0: {
+        value: 15,
+        collision: true,
+        brightness: false,
+        isRoom: true,
+        isFloor: false,
+        isPath: false,
+        mapChr: "|",
+        string: 'wall_0'
+    },
+    WALL_1: {
+        value: 16,
+        collision: true,
+        brightness: false,
+        isRoom: true,
+        isFloor: false,
+        isPath: false,
+        mapChr: "-",
+        string: 'wall_1'
     },
 
     // 配置時に使用。実際のmapArrayには使用されない
@@ -1072,7 +1117,7 @@ tm.define("GameScene", {
 
         for (let xx = 0; xx < 9; xx++) {
             for (let yy = 0; yy < 9; yy++) {
-                setBgArray(xx, yy, new BgSprite(xx, yy, 1).addChildTo(group0));
+                setBgArray(xx, yy, new MapChipSprite(xx, yy, 1).addChildTo(group0));
             }
         }
 
@@ -1092,6 +1137,18 @@ tm.define("GameScene", {
                     fontSize: 16,
                     fontFamily: FONT_FAMILY,
                     text: "G A M E  O V E R",
+                    align: "center",
+                },
+                {
+                    type: "Label", name: "mapLabel",
+                    x: SCREEN_CENTER_X,
+                    y: SCREEN_CENTER_Y - 1000,
+                    fillStyle: "#fff",
+                    shadowColor: "#000",
+                    shadowBlur: 0,
+                    fontSize: 12,
+                    fontFamily: FONT_FAMILY_MAP,
+                    text: "",
                     align: "center",
                 },
                 {
@@ -1582,6 +1639,27 @@ tm.define("GameScene", {
                     getBgArray(4 + xx, 4 + yy).gotoAndPlay("" + bgMcd.value);
                 }
             }
+            // 全体マップ表示
+            {
+                this.mapLabel.setAlpha(1.0);
+                let mapLabelStr = "";
+                for (let yy = 4; yy <= MAP_HEIGHT - (4 + 4); yy++) {
+                    let tmp = "";
+                    for (let xx = 4; xx <= MAP_WIDTH - (4 + 4); xx++) {
+                        if (getViewArray(xx, yy) == 1) {
+                            if ((xx === player.mapX) && (yy === player.mapY)) {
+                                tmp += "@";
+                            } else {
+                                tmp += getMapChipDef(xx, yy).mapChr;
+                            }
+                        } else {
+                            tmp += " ";
+                        }
+                    }
+                    mapLabelStr += tmp + "\n";
+                }
+                this.mapLabel.text = mapLabelStr;
+            }
         }
 
         ++frame;
@@ -1593,24 +1671,6 @@ tm.define("GameScene", {
  */
 tm.define("PlayerSprite", {
     superClass: "tm.app.AnimationSprite",
-
-    /*
-        init: function () {
-            this.superInit("player", 128, 128);
-            this.direct = '';
-            this.setInteractive(false);
-            this.setBoundingType("rect");
-            this.alpha = 1.0;
-            this.x = 96 + 4 * 128;
-            this.y = 256 + 4 * 128;
-    
-            this.status = PL_STATUS.INIT;
-            this.mapX = 0;
-            this.mapY = 0;
-            this.mapDepth = 1;  // 地下1階
-            this.fadeCounter = 0;
-        },
-    */
     init: function () {
         let ss = tm.asset.SpriteSheet({
             // 画像
@@ -1655,35 +1715,38 @@ tm.define("PlayerSprite", {
 /*
  * マップ用スプライトの定義
  */
-tm.define("BgSprite", {
+tm.define("MapChipSprite", {
     superClass: "tm.app.AnimationSprite",
 
     init: function (xPos, yPos, kind) {
         let ss = tm.asset.SpriteSheet({
             // 画像
-            image: "bg",
+            image: "map_chip",
             // １コマのサイズ指定および全コマ数
             frame: {
                 width: 128,
                 height: 128,
-                count: 14
+                count: 17
             },
             // アニメーションの定義（開始コマ、終了コマ+1、次のアニメーション,wait）
             animations: {
-                "0": [0, 1, "0", 1],
-                "1": [1, 2, "1", 1],
-                "2": [2, 3, "2", 1],
-                "3": [3, 4, "3", 1],
-                "4": [4, 5, "4", 1],
-                "5": [5, 6, "5", 1],
-                "6": [6, 7, "6", 1],
-                "7": [7, 8, "7", 1],
-                "8": [8, 9, "8", 1],
-                "9": [9, 10, "9", 1],
-                "10": [10, 11, "10", 1],
-                "11": [11, 12, "11", 1],
-                "12": [12, 13, "12", 1],
-                "13": [13, 14, "13", 1],
+                "0": [0, 1, "0", 30],
+                "1": [1, 2, "1", 30],
+                "2": [2, 3, "2", 30],
+                "3": [3, 4, "3", 30],
+                "4": [4, 5, "4", 30],
+                "5": [5, 6, "5", 30],
+                "6": [6, 7, "6", 30],
+                "7": [7, 8, "7", 30],
+                "8": [8, 9, "8", 30],
+                "9": [9, 10, "9", 30],
+                "10": [10, 11, "10", 30],
+                "11": [11, 12, "11", 30],
+                "12": [12, 13, "12", 30],
+                "13": [13, 14, "13", 30],
+                "14": [14, 15, "14", 30],
+                "15": [15, 16, "15", 30],
+                "16": [16, 17, "16", 30],
             }
         });
 
@@ -2308,13 +2371,16 @@ function setTreasureBox() {
         let xx = getRandomInt(MAP_WIDTH);
         let yy = getRandomInt(MAP_HEIGHT);
         let mcd = MAP_CHIP_DEF.getByValue('value', getMapArray(xx, yy));
-        if ((mcd !== MAP_CHIP_DEF.FLOOR) && (mcd !== MAP_CHIP_DEF.PATH)) continue; // 階段が配置できるのは床 or 通路
-
-        setMapArray(xx, yy, MAP_CHIP_DEF.T_BOX.value);  // FIXME:後で通路用の
-        setDebugArray(xx, yy, "*");
-        if (--cnt < 0) {
-            break;
+        // 階段が配置できるのは床 or 通路
+        if (mcd === MAP_CHIP_DEF.FLOOR) {
+            setMapArray(xx, yy, MAP_CHIP_DEF.T_BOX_F.value);
+        } else if (mcd === MAP_CHIP_DEF.PATH) {
+            setMapArray(xx, yy, MAP_CHIP_DEF.T_BOX_P.value);
+        } else {
+            continue;
         }
+        setDebugArray(xx, yy, "*");
+        if (--cnt < 0) break;
     }
 }
 
@@ -2334,7 +2400,11 @@ function setTrap() {
         if ((kind == 0) && (mcd === MAP_CHIP_DEF.PATH)) continue;   // 宝箱型の罠は通路に配置できない
         let mcdTrap;
         if (kind === 0) {
-            mcdTrap = MAP_CHIP_DEF.TRAP_T;
+            if (mcd === MAP_CHIP_DEF.FLOOR) {
+                mcdTrap = MAP_CHIP_DEF.TRAP_T_F;
+            } else {
+                mcdTrap = MAP_CHIP_DEF.TRAP_T_P;
+            }
         } else {
             if (mcd === MAP_CHIP_DEF.FLOOR) {
                 mcdTrap = MAP_CHIP_DEF.TRAP_F;
