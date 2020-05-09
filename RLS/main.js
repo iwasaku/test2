@@ -984,6 +984,7 @@ const DIR_KEY_DEF = defineEnum({
     },
 });
 let dirKeyRepeatTimer = 15;
+let dirKeyRepeatLevel = 0;  // 0:遅い 1~5:中くらい 6~:早い
 let dirKey = DIR_KEY_DEF.NONE;
 
 let player = null;
@@ -1796,12 +1797,17 @@ function dirKeyProcStart(dkDef) {
     if (dirKey !== DIR_KEY_DEF.NONE) return;
     dirKey = dkDef;
     dirKeyRepeatTimer = 15;
+    dirKeyRepeatLevel = 0;
     dirKeyProcInternal(dirKey);
 }
 function dirKeyProcMove(dkDef) {
     if (dirKey !== dkDef) return;
     if (--dirKeyRepeatTimer < 0) {
-        dirKeyRepeatTimer = 3;
+        dirKeyRepeatLevel++;
+        if (dirKeyRepeatLevel <= 0) dirKeyRepeatTimer = 15;
+        else if (dirKeyRepeatLevel <= 3) dirKeyRepeatTimer = 3;
+        else if (dirKeyRepeatLevel <= 6) dirKeyRepeatTimer = 1;
+        else dirKeyRepeatTimer = 0;
         dirKeyProcInternal(dirKey);
     }
 }
@@ -1812,25 +1818,43 @@ function dirKeyProcEnd(dkDef) {
 
 function dirKeyProcInternal(dkDef) {
     if (!player.status.isAccKey) return;
-    let moveFlag = false;
     let oldX = player.mapX;
     let oldY = player.mapY;
-    player.mapX += dkDef.addX;
-    player.mapY += dkDef.addY;
-    do {
-        if (player.mapX < 4) break;
-        if (player.mapY < 4) break;
-        if (chkMapColi(player.mapX, player.mapY)) break;
-        moveFlag = true;
-        if (++player.aminCount > 1) player.aminCount = 0;
-        if (dkDef.aminBase !== null) {
-            player.aminBase = dkDef.aminBase;
-        }
-        player.gotoAndPlay(player.aminBase + player.aminCount);
-    } while (false);
-    if (!moveFlag) {
+    let addX = dkDef.addX;
+    let addY = dkDef.addY;
+    let retry = 0;
+    for (; ;) {
+        let moveFlag = false;
+        player.mapX += addX;
+        player.mapY += addY;
+        do {
+            //            if (player.mapX < 4) break;
+            //            if (player.mapY < 4) break;
+            if (chkMapColi(player.mapX, player.mapY)) break;
+            moveFlag = true;
+            if (++player.aminCount > 1) player.aminCount = 0;
+            if (dkDef.aminBase !== null) player.aminBase = dkDef.aminBase;
+            player.gotoAndPlay(player.aminBase + player.aminCount);
+        } while (false);
+        if (moveFlag) break;
+
         player.mapX = oldX;
         player.mapY = oldY;
+        if ((dkDef.addX !== 0) && (dkDef.addY !== 0)) {
+            if (retry === 0) {
+                addX = 0;
+                addY = dkDef.addY;
+                retry++;
+                continue;
+            }
+            if (retry === 1) {
+                addX = dkDef.addX;
+                addY = 0;
+                retry++;
+                continue;
+            }
+        }
+        break;
     }
 }
 
@@ -2002,28 +2026,18 @@ function makeMap() {
 
     // 扉と通路の作成
     let doorInfoList = makeDoorAndPath();
-    //    console.log("makeDoorAndPath");
-    //    printDebugArray();
 
     // 階段の配置
     setStair();
-    //    console.log("setStair");
-    //    printDebugArray();
 
     // 宝箱の配置
     setTreasureBox();
-    //    console.log("setTreasureBox");
-    //    printDebugArray();
 
     // 罠の配置
     setTrap();
-    //    console.log("setTrap");
-    //    printDebugArray();
 
     // 隠し扉に変換
     setSecretDoor(doorInfoList);
-    //    console.log("setSecretDoor");
-    //    printDebugArray();
 
     // 敵の配置
     setEnemy();
@@ -2048,7 +2062,7 @@ function makeMap() {
 //
 const MIN_REGION_X_SIZE = 7;
 const MIN_REGION_Y_SIZE = 7;
-const MAX_REGION_DIV_COUNT = 10;
+const MAX_REGION_DIV_COUNT = 15;
 function divRegion() {
     let divDir = true; // true:縦 false:横
     let divCnt = 0; // 分割回数
@@ -2099,8 +2113,8 @@ function divRegion() {
         }
 
         // 終了証券
-        if ((orgRagion.xSize < (MIN_REGION_X_SIZE * 2)) && (orgRagion.ySize < (MIN_REGION_Y_SIZE * 2))) {
-            // XY両方分割できなくなった
+        if ((orgRagion.xSize < (MIN_REGION_X_SIZE * 2)) || (orgRagion.ySize < (MIN_REGION_Y_SIZE * 2))) {
+            // XYどちらかが分割できなくなった
             mapRegionList.push(orgRagion);
             break;
         }
